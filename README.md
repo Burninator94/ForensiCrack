@@ -53,4 +53,3 @@ passphrases.txt - expanded passphrase wordlist (https://github.com/initstring/pa
 2. Run ForensiCrack
    python3 forensicrack.py --execute
 3. Review results in /output/, /logs/, and /archives/ directories
-4. 
