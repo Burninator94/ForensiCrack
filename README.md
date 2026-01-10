@@ -42,11 +42,11 @@ ForensiCrack v1 officially supports Debian/Kali Linux
 Download betterrockyou.txt at (https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa1C2M4Ame_3bjxU9xXGfY) and add to wordlist direcotry
 
 # Dependency Tools 
-Hashcat - GPU/CPU password cracking engine (https://hashcat.net/hashcat/)
-John the Ripper - CPU-based password crack with broad support (https://www.openwall.com/john/)
-Stegseek - Fast steganography brute-forcer for JPEGs (https://github.com/RickdeJager/stegseek)
-pkcrack - Known plaintext attack tool for legacy Zip encrytpion (https://github.com/keyunluo/pkcrack)
-passphrases.txt - expanded passphrase wordlist (https://github.com/initstring/passphrase-wordlist/releases)
+1. Hashcat - GPU/CPU password cracking engine (https://hashcat.net/hashcat/)
+2. John the Ripper - CPU-based password crack with broad support (https://www.openwall.com/john/)
+3. Stegseek - Fast steganography brute-forcer for JPEGs (https://github.com/RickdeJager/stegseek)
+4. pkcrack - Known plaintext attack tool for legacy Zip encrytpion (https://github.com/keyunluo/pkcrack)
+5. passphrases.txt - expanded passphrase wordlist (https://github.com/initstring/passphrase-wordlist/releases)
 
 # Operation
 1. place files in input directory (/runtime/input/)
