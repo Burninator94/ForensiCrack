@@ -3,7 +3,7 @@ import argparse
 import sys
 from forensicrack.config import Config
 from forensicrack.install import install_dependencies
-from forensicrack.core import ForensiCrackApp
+from forensicrack.app import ForensiCrackApp   # ← updated import
 from forensicrack.logging_config import setup_logging
 
 

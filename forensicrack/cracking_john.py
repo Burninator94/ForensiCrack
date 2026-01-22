@@ -18,10 +18,13 @@ class JohnEngine:
                 f"--pot={output_path}",
             ]
             self.logger.info(f"Running John: {' '.join(cmd)}")
-            result = subprocess.run(cmd)
-            if result.returncode == 0:
+            try:
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
                 self.logger.info(f"John succeeded on {hashfile} with {wordlist}")
+                self.logger.debug(result.stdout)
                 return True
+            except subprocess.CalledProcessError as e:
+                self.logger.warning(f"John attempt failed: {e.stderr}")
 
-        self.logger.warning(f"John failed for {hashfile}")
+        self.logger.warning(f"John exhausted all wordlists for {hashfile}")
         return False

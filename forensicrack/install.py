@@ -21,13 +21,11 @@ def install_dependencies(config):
     """
     print("[*] Installing dependencies for ForensiCrack...")
 
-    # Enforce Debian/Kali-only support
     system = platform.system().lower()
     if system != "linux":
         print("[!] ForensiCrack v1 supports Debian/Kali Linux only.")
         sys.exit(1)
 
-    # Ensure runtime dirs exist
     for path in [
         config.INPUT_DIR,
         config.OUTPUT_DIR,
@@ -43,6 +41,7 @@ def install_dependencies(config):
     print("[+] Installation complete.")
     print("[!] Reminder: brockyou.txt must be placed manually into:")
     print(f"    {config.WORDLIST_DIR}")
+    print("    Download from: https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa1C2M4Ame_3bjxU9xXGfY")
     print("    This file is not distributed with ForensiCrack.")
 
 
@@ -56,7 +55,6 @@ def _install_linux_tools():
     except subprocess.CalledProcessError as e:
         print(f"[!] Failed to install core tools via apt-get: {e}")
 
-    # Install pkcrack from source if not available
     if shutil.which("pkcrack") is None:
         print("[*] Installing pkcrack from source...")
         try:
@@ -73,7 +71,6 @@ def _install_linux_tools():
 def _install_wordlists(config):
     print("[*] Downloading wordlists into:", config.WORDLIST_DIR)
 
-    # Only passphrases.txt is downloaded automatically
     wordlists = {
         "passphrases.txt": "https://github.com/initstring/passphrase-wordlist/releases/download/v2025.1/passphrases.txt"
     }

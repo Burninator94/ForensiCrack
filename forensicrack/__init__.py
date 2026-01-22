@@ -1,10 +1,10 @@
 """
 ForensiCrack - DFIR Password, Archive, and Steganography Automation Framework
-Author: Taylor Trulson
+Author: Burninator94
 Version: 1.0
 """
 
-from .core import ForensiCrackApp
+from .app import ForensiCrackApp
 from .config import Config
 from .file_id import FileIdentifier
 from .wordlists import WordlistManager

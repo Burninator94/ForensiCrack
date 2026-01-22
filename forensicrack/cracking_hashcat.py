@@ -50,36 +50,35 @@ class HashcatEngine:
                 "--outfile-format", "2",
                 "--force",
             ]
-            self.logger.info(f"Running hashcat: {' '.join(cmd)}")
-            result = subprocess.run(cmd)
-            if result.returncode == 0:
+            self.logger.info(f"Running Hashcat: {' '.join(cmd)}")
+            try:
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
                 self.logger.info(f"Hashcat succeeded on {hashfile} with {wordlist}")
+                self.logger.debug(result.stdout)
                 return True
+            except subprocess.CalledProcessError as e:
+                self.logger.warning(f"Hashcat attempt failed: {e.stderr}")
 
-        self.logger.warning(f"Hashcat failed for {hashfile}")
+        self.logger.warning(f"Hashcat exhausted all wordlists for {hashfile}")
         return False
 
     def resolve_hashcat_mode(self, evidence, file_identifier, zip_info=None):
-        # 1. User-supplied hash algorithm
         if evidence.known_hash_algo:
             algo = evidence.known_hash_algo.lower()
             mode = self.KNOWN_HASH_MAP.get(algo)
-            if mode:
+            if mode is not None:
                 return mode
 
-        # 2. User-supplied encryption algorithm
         if evidence.known_encryption_algo:
             enc = evidence.known_encryption_algo.lower()
             mode = self.KNOWN_ENCRYPTION_MAP.get(enc)
-            if mode:
+            if mode is not None:
                 return mode
 
         ext = evidence.ext
 
-        # 3. Infer from file type
         if file_identifier.is_pdf(ext):
-            # Default to modern PDF 1.7 if unsure
-            return 10700
+            return 10700  # Default modern PDF
 
         office_class = file_identifier.classify_office(ext)
         if office_class == "office2013":
@@ -93,18 +92,17 @@ class HashcatEngine:
         if ext == ".zip" and zip_info:
             if zip_info == "aes":
                 return 13600
-            elif zip_info == "zipcrypto":
+            elif zip_info in ("zipcrypto", None):
                 return "USE_PKCRACK"
 
-        # 4. Unknown → ask user
-        mode = input(
-            f"Unknown hash/encryption for {evidence.path}. "
-            f"Enter Hashcat mode number (or blank to abort): "
+        # Fallback prompt
+        mode_str = input(
+            f"Unknown mode for {evidence.path}. Enter Hashcat mode (integer) or blank to skip: "
         ).strip()
-        if not mode:
+        if not mode_str:
             return None
         try:
-            return int(mode)
+            return int(mode_str)
         except ValueError:
-            self.logger.error("Invalid Hashcat mode entered.")
+            self.logger.error("Invalid mode entered.")
             return None
