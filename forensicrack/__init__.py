@@ -9,6 +9,7 @@ from .config import Config
 from .file_id import FileIdentifier
 from .wordlists import WordlistManager
 from .steg import StegEngine
+from .steg_zsteg import ZstegEngine
 from .cracking_hashcat import HashcatEngine
 from .cracking_john import JohnEngine
 from .archives import ArchiveEngine
@@ -19,6 +20,7 @@ __all__ = [
     "FileIdentifier",
     "WordlistManager",
     "StegEngine",
+    "ZstegEngine",
     "HashcatEngine",
     "JohnEngine",
     "ArchiveEngine",
