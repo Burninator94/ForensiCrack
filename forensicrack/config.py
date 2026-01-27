@@ -18,7 +18,7 @@ class Config:
     PLAINTEXTS_DIR = os.path.join(RUNTIME_DIR, "plaintexts")
 
     # Wordlist filenames
-    BROCKYOU = os.path.join(WORDLIST_DIR, "brockyou.txt")               # corrected name
+    BROCKYOU = os.path.join(WORDLIST_DIR, "brockyou.txt")               
     PASSPHRASES = os.path.join(WORDLIST_DIR, "passphrases.txt")
 
     LOG_FILE = os.path.join(LOG_DIR, "forensicrack.log")
