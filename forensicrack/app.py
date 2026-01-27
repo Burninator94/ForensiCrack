@@ -7,6 +7,7 @@ from .models import EvidenceFile
 from .file_id import FileIdentifier
 from .wordlists import WordlistManager
 from .steg import StegEngine
+from .steg_zsteg import ZstegEngine
 from .cracking_hashcat import HashcatEngine
 from .cracking_john import JohnEngine
 from .archives import ArchiveEngine
@@ -19,9 +20,12 @@ class ForensiCrackApp:
         self.file_id = FileIdentifier()
         self.wordlist_mgr = WordlistManager(self.config.WORDLIST_DIR)
         self.steg_engine = StegEngine(logger)
+        self.zsteg_engine = ZstegEngine(logger)
         self.hashcat_engine = HashcatEngine(logger)
         self.john_engine = JohnEngine(logger)
-        self.archive_engine = ArchiveEngine(self.config.ARCHIVE_DIR, logger)
+        self.archive_engine = ArchiveEngine(
+            self.config.ARCHIVE_DIR, self.config.PLAINTEXTS_DIR, logger
+        )
         self.processed_count = 0
         self.success_count = 0
 
@@ -40,15 +44,29 @@ class ForensiCrackApp:
                 continue
 
             evidence = EvidenceFile(path=path)
-            evidence.file_type, evidence.mime_type, evidence.is_graphic, evidence.is_archive = \
-                self.file_id.identify(path)
+            (
+                evidence.file_type,
+                evidence.mime_type,
+                evidence.is_graphic,
+                evidence.is_archive,
+                evidence.is_text,  # now available
+            ) = self.file_id.identify(path)
 
             self.logger.info("Processing: %s (%s)", evidence.name, evidence.ext)
 
             success = False
 
-            if evidence.is_graphic and evidence.ext in {".jpg", ".jpeg"}:
-                success = self.steg_engine.run(path, wordlists, self.config.OUTPUT_DIR)
+            if evidence.is_graphic:
+                stego_output_dir = self.config.STEGO_OUTPUT_DIR
+                if evidence.ext in {".jpg", ".jpeg"}:
+                    success = self.steg_engine.run(path, wordlists, stego_output_dir)
+                    if not success:
+                        self.logger.info(
+                            "Stegseek failed - falling back to zsteg for %s", evidence.name
+                        )
+                        success = self.zsteg_engine.run(path, stego_output_dir)
+                elif evidence.ext in {".png", ".bmp"}:
+                    success = self.zsteg_engine.run(path, stego_output_dir)
 
             elif evidence.is_archive:
                 success = self._handle_archive(evidence, wordlists)
@@ -59,6 +77,12 @@ class ForensiCrackApp:
             elif evidence.ext == ".hash":
                 success = self._handle_hash_file(evidence, wordlists)
 
+            elif evidence.is_text:
+                self.logger.info(
+                    "Plain text file detected (%s) - no cracking applied, skipping", evidence.name
+                )
+                # Future: could add keyword search, entropy analysis, etc.
+
             else:
                 self.logger.warning("Unsupported file type for %s - skipping", evidence.name)
 
@@ -66,8 +90,11 @@ class ForensiCrackApp:
                 self.success_count += 1
             self.processed_count += 1
 
-        self.logger.info("Execution complete. Processed %d files, %d successes.",
-                         self.processed_count, self.success_count)
+        self.logger.info(
+            "Execution complete. Processed %d files, %d successes.",
+            self.processed_count,
+            self.success_count,
+        )
 
     def _handle_archive(self, evidence: EvidenceFile, wordlists: List[str]) -> bool:
         zip_info = None
@@ -80,35 +107,34 @@ class ForensiCrackApp:
             self.logger.warning("Could not determine cracking mode for %s", evidence.name)
             return False
 
-        output_path = os.path.join(self.config.OUTPUT_DIR, f"{evidence.name}.pot")
+        output_path = os.path.join(self.config.CRACKED_OUTPUT_DIR, f"{evidence.name}.pot")
 
         if isinstance(mode, str) and mode == "USE_PKCRACK":
-            if not os.path.exists(self.config.KNOWN_PLAINTEXT_ZIP):
-                self.logger.error("Known plaintext ZIP required for pkcrack but missing")
-                return False
-            decrypted_zip = os.path.join(self.config.ARCHIVE_DIR, f"decrypted_{evidence.name}")
-            success = self.archive_engine.run_pkcrack(
-                evidence.path,
-                self.config.KNOWN_PLAINTEXT_ZIP,
-                self.config.KNOWN_PLAINTEXT_FILE,
-                decrypted_zip
+            decrypted_zip = os.path.join(
+                self.config.EXTRACTED_OUTPUT_DIR, f"decrypted_{evidence.name}.zip"
             )
+            success = self.archive_engine.run_bkcrack(evidence.path, decrypted_zip)
             if success:
-                self.archive_engine.extract_to_archive_dir(decrypted_zip)
+                extracted_dir = self.archive_engine.extract_to_archive_dir(decrypted_zip)
+                if extracted_dir:
+                    self.logger.info(f"Decrypted archive extracted to: {extracted_dir}")
             return success
 
         else:
             # Try Hashcat first
-            success = self.hashcat_engine.crack_hashfile(evidence.path, mode, wordlists, output_path)
+            success = self.hashcat_engine.crack_hashfile(
+                evidence.path, mode, wordlists, output_path
+            )
             if not success:
-                # Fallback to John
-                self.logger.info("Hashcat failed - falling back to John for %s", evidence.name)
+                self.logger.info(
+                    "Hashcat failed - falling back to John for %s", evidence.name
+                )
                 success = self.john_engine.crack(evidence.path, wordlists, output_path)
 
             if success:
-                # For encrypted archives, attempt extraction (placeholder - expand as needed)
-                if evidence.is_archive:
-                    self.archive_engine.extract_to_archive_dir(evidence.path)  # Note: assumes password known post-crack
+                # Optional future: if password recovered, attempt auto-extraction
+                # self.archive_engine.extract_to_archive_dir(evidence.path)
+                pass
             return success
 
     def _handle_encrypted_file(self, evidence: EvidenceFile, wordlists: List[str]) -> bool:
@@ -117,8 +143,10 @@ class ForensiCrackApp:
             self.logger.warning("Invalid mode for encrypted file %s", evidence.name)
             return False
 
-        output_path = os.path.join(self.config.OUTPUT_DIR, f"{evidence.name}.pot")
-        success = self.hashcat_engine.crack_hashfile(evidence.path, mode, wordlists, output_path)
+        output_path = os.path.join(self.config.CRACKED_OUTPUT_DIR, f"{evidence.name}.pot")
+        success = self.hashcat_engine.crack_hashfile(
+            evidence.path, mode, wordlists, output_path
+        )
         if not success:
             success = self.john_engine.crack(evidence.path, wordlists, output_path)
         return success
@@ -129,8 +157,10 @@ class ForensiCrackApp:
             self.logger.warning("Invalid mode for hash file %s", evidence.name)
             return False
 
-        output_path = os.path.join(self.config.OUTPUT_DIR, f"{evidence.name}.pot")
-        success = self.hashcat_engine.crack_hashfile(evidence.path, mode, wordlists, output_path)
+        output_path = os.path.join(self.config.CRACKED_OUTPUT_DIR, f"{evidence.name}.pot")
+        success = self.hashcat_engine.crack_hashfile(
+            evidence.path, mode, wordlists, output_path
+        )
         if not success:
             success = self.john_engine.crack(evidence.path, wordlists, output_path)
         return success
