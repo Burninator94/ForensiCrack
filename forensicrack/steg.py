@@ -11,11 +11,14 @@ class StegEngine:
         os.makedirs(output_dir, exist_ok=True)
 
         for wordlist in wordlists:
-            cmd = ["stegseek", filepath, wordlist, "crack", output_dir]
+            base_name = os.path.splitext(os.path.basename(filepath))[0]
+            output_file = os.path.join(output_dir, f"{base_name}_extracted.out")
+
+            cmd = ["stegseek", filepath, wordlist, output_file]
             self.logger.info(f"Running stegseek: {' '.join(cmd)}")
             result = subprocess.run(cmd)
             if result.returncode == 0:
-                self.logger.info(f"Steg success on {filepath} with {wordlist}")
+                self.logger.info(f"Steg success on {filepath} with {wordlist} → {output_file}")
                 return True
 
         self.logger.warning(f"Steg failed for {filepath}")
