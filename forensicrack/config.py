@@ -15,24 +15,26 @@ class Config:
     LOG_DIR = os.path.join(RUNTIME_DIR, "logs")
     ARCHIVE_DIR = os.path.join(RUNTIME_DIR, "archives")
     WORDLIST_DIR = os.path.join(RUNTIME_DIR, "wordlists")
+    PLAINTEXTS_DIR = os.path.join(RUNTIME_DIR, "plaintexts")
 
     # Wordlist filenames
-    BROCKYOU = os.path.join(WORDLIST_DIR, "brockyou.txt")
+    BROCKYOU = os.path.join(WORDLIST_DIR, "brockyou.txt")               # corrected name
     PASSPHRASES = os.path.join(WORDLIST_DIR, "passphrases.txt")
 
     LOG_FILE = os.path.join(LOG_DIR, "forensicrack.log")
 
     SUPPORTED_ARCHIVES = [".zip", ".7z"]
-    SUPPORTED_STEGO = [".jpg", ".jpeg"]
+    SUPPORTED_STEGO = [".jpg", ".jpeg", ".png", ".bmp"]
     SUPPORTED_HASHES = [".hash"]
 
-    # Known plaintext for pkcrack (create these manually if needed)
-    KNOWN_PLAINTEXT_ZIP = os.path.join(RUNTIME_DIR, "archive", "plaintext.zip")
-    KNOWN_PLAINTEXT_FILE = "plaintextfile.txt"  # filename inside the ZIP
-
-    # Hashcat modes (moved here from cracking_hashcat.py for central access)
+    # Hashcat modes
     ZIP_AES_MODE = 13600
     SEVENZIP_AES_MODE = 11600
+
+    # Functional output subdirectories
+    STEGO_OUTPUT_DIR = os.path.join(OUTPUT_DIR, "stego")
+    CRACKED_OUTPUT_DIR = os.path.join(OUTPUT_DIR, "cracked")
+    EXTRACTED_OUTPUT_DIR = os.path.join(OUTPUT_DIR, "extracted")
 
     # Create directories on init
     def __post_init__(self):
@@ -43,5 +45,9 @@ class Config:
             self.LOG_DIR,
             self.ARCHIVE_DIR,
             self.WORDLIST_DIR,
+            self.PLAINTEXTS_DIR,
+            self.STEGO_OUTPUT_DIR,
+            self.CRACKED_OUTPUT_DIR,
+            self.EXTRACTED_OUTPUT_DIR,
         ]:
             os.makedirs(path, exist_ok=True)
