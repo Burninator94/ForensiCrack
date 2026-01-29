@@ -51,13 +51,41 @@ class HashcatEngine:
                 "--force",
             ]
             self.logger.info(f"Running Hashcat: {' '.join(cmd)}")
+
             try:
-                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-                self.logger.info(f"Hashcat succeeded on {hashfile} with {wordlist}")
-                self.logger.debug(result.stdout)
-                return True
+                # Capture bytes safely (no text=True)
+                result = subprocess.run(cmd, check=True, capture_output=True)
+
+                # Decode with fallback to prevent crashes
+                stdout_str = result.stdout.decode('utf-8', errors='replace')
+                stderr_str = result.stderr.decode('utf-8', errors='replace')
+
+                # Log only if there's meaningful content
+                if stdout_str.strip():
+                    self.logger.debug(f"Hashcat stdout:\n{stdout_str.strip()}")
+                if stderr_str.strip():
+                    self.logger.debug(f"Hashcat stderr:\n{stderr_str.strip()}")
+
+                self.logger.info(f"Hashcat completed on {hashfile} with {wordlist}")
+
+                # Success criterion: potfile has content (cracked hashes appended)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    self.logger.info(f"Hashcat succeeded → potfile updated: {output_path}")
+                    return True
+                else:
+                    self.logger.info("No passwords cracked this run (potfile empty)")
+
             except subprocess.CalledProcessError as e:
-                self.logger.warning(f"Hashcat attempt failed: {e.stderr}")
+                # Handle non-zero exit gracefully
+                stdout_str = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+                stderr_str = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+
+                self.logger.warning(f"Hashcat failed (exit code {e.returncode}): {stderr_str.strip()}")
+                if stdout_str.strip():
+                    self.logger.debug(f"Hashcat stdout on failure:\n{stdout_str.strip()}")
+
+            except Exception as e:
+                self.logger.error(f"Unexpected error running Hashcat: {e}")
 
         self.logger.warning(f"Hashcat exhausted all wordlists for {hashfile}")
         return False
