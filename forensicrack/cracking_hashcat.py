@@ -73,7 +73,7 @@ class HashcatEngine:
                     self.logger.info(f"Hashcat succeeded → potfile updated: {output_path}")
                     return True
                 else:
-                    self.logger.info("No passwords cracked this run (potfile empty)")
+                    self.logger.info("No passwords cracked this run (potfile empty or unchanged)")
 
             except subprocess.CalledProcessError as e:
                 # Handle non-zero exit gracefully
