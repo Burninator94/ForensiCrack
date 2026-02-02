@@ -1,5 +1,6 @@
 import os
 import logging
+import subprocess
 from typing import List
 
 from .config import Config
@@ -96,6 +97,31 @@ class ForensiCrackApp:
             self.success_count,
         )
 
+    def extract_hash(self, evidence: EvidenceFile) -> str | None:
+        ext = evidence.ext.lower()
+        hash_extract_path = os.path.join(self.config.CRACKED_OUTPUT_DIR, f"{evidence.name}.hash")
+
+        if ext in {".zip", ".7z", ".rar"}:
+            tool = "zip2john" if ext == ".zip" else "7z2john" if ext == ".7z" else "rar2john"
+        elif ext == ".pdf":
+            tool = "pdf2john"
+        elif ext in {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"}:
+            tool = "office2john"
+        else:
+            self.logger.warning(f"No hash extraction tool for {ext}")
+            return None
+
+        cmd = [tool, evidence.path]
+        self.logger.info(f"Extracting hash with {' '.join(cmd)}")
+        try:
+            with open(hash_extract_path, "w") as f:
+                subprocess.run(cmd, check=True, stdout=f)
+            self.logger.info(f"Hash extracted to {hash_extract_path}")
+            return hash_extract_path
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Hash extraction failed: {e.stderr}")
+            return None
+
     def _handle_archive(self, evidence: EvidenceFile, wordlists: List[str]) -> bool:
         zip_info = None
         if evidence.ext == ".zip":
@@ -121,15 +147,21 @@ class ForensiCrackApp:
             return success
 
         else:
+            # Extract hash first
+            hash_path = self.extract_hash(evidence)
+            if not hash_path:
+                return False
+            crack_target = hash_path
+
             # Try Hashcat first
             success = self.hashcat_engine.crack_hashfile(
-                evidence.path, mode, wordlists, output_path
+                crack_target, mode, wordlists, output_path
             )
             if not success:
                 self.logger.info(
                     "Hashcat failed - falling back to John for %s", evidence.name
                 )
-                success = self.john_engine.crack(evidence.path, wordlists, output_path)
+                success = self.john_engine.crack(crack_target, wordlists, output_path)
 
             if success:
                 # Optional future: if password recovered, attempt auto-extraction
@@ -143,12 +175,18 @@ class ForensiCrackApp:
             self.logger.warning("Invalid mode for encrypted file %s", evidence.name)
             return False
 
+        # Extract hash first
+        hash_path = self.extract_hash(evidence)
+        if not hash_path:
+            return False
+        crack_target = hash_path
+
         output_path = os.path.join(self.config.CRACKED_OUTPUT_DIR, f"{evidence.name}.pot")
         success = self.hashcat_engine.crack_hashfile(
-            evidence.path, mode, wordlists, output_path
+            crack_target, mode, wordlists, output_path
         )
         if not success:
-            success = self.john_engine.crack(evidence.path, wordlists, output_path)
+            success = self.john_engine.crack(crack_target, wordlists, output_path)
         return success
 
     def _handle_hash_file(self, evidence: EvidenceFile, wordlists: List[str]) -> bool:
