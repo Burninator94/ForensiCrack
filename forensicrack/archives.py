@@ -50,9 +50,7 @@ class ArchiveEngine:
             "bkcrack",
             "-C", encrypted_zip,
             "-c", internal_name,
-            "-P", plaintext_path,
-            "-p", internal_name,
-            "-d", output_zip
+            "-p", plaintext_path,  # Note: -P is not used; -p is for plaintext file
         ]
         self.logger.info(f"Running bkcrack: {' '.join(cmd)}")
         try:
