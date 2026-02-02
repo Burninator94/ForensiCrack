@@ -15,8 +15,8 @@ class ZstegEngine:
         cmd = ["zsteg", "-a", filepath]
         self.logger.info(f"Running zsteg: {' '.join(cmd)}")
         try:
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            output = result.stdout.strip()
+            result = subprocess.run(cmd, check=True, capture_output=True)
+            output = result.stdout.decode('utf-8', errors='replace').strip()
             if "nothing to extract" in output.lower() or not output:
                 self.logger.info(f"No hidden data found in {filepath}")
                 return False
@@ -26,5 +26,5 @@ class ZstegEngine:
             self.logger.info(f"zsteg extraction saved: {output_file}")
             return True
         except subprocess.CalledProcessError as e:
-            self.logger.warning(f"zsteg failed: {e.stderr}")
+            self.logger.warning(f"zsteg failed: {e.stderr.decode('utf-8', errors='replace')}")
             return False
