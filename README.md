@@ -55,7 +55,7 @@ It is highly recommended that users ensure all dependency tools are properly ins
 sudo python3 forensicrack.py --update
 
 # Setup
-## wARNING: This tool is designed to support RockYou2o21 along with brockyou.txt, and passphrases.txt. To leverage the full power of ForensiCrack, you will need 150-200GB of available space. If you do not wish to utilize the full wordlists library, do not download RockYou2021 from the link below and/or select 'N' when prompted during wordlist escalation mid-execution.
+## WARNING: This tool is designed to support RockYou2021 along with brockyou.txt, and passphrases.txt. To leverage the full power of ForensiCrack, you will need 150-200GB of available space. If you do not wish to utilize the full wordlists library, do not download RockYou2021 from the link below and/or select 'N' when prompted during wordlist escalation mid-execution.
 
 Download brockyou.txt at ( https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa1C2M4Ame_3bjxU9xXGfY ) and add to wordlist directory
 Download ROckYou2021 at ( https://mega.nz/folder/aDpmxCiD#f_pSJ0vV698-Ev1mbyYNAQ ) and each 7z group to the wordlist directory
