@@ -49,9 +49,16 @@ ForensiCrack v1 officially supports Debian/Kali Linux
 3. Run the installer: sudo python3 forensicrack.py --install
 This should create all runtime directories, install required tools via apt, build and install bkcrack from source (if needed), download the passphrases.txt wordlist automatically, and self-validate completion
 
+# Update
+
+It is highly recommended that users ensure all dependency tools are properly installed and up to date. This can be achieved directly through ForensiCrack using the following:
+sudo python3 forensicrack.py --update
+
 # Setup
+## wARNING: This tool is designed to support RockYou2o21 along with brockyou.txt, and passphrases.txt. To leverage the full power of ForensiCrack, you will need 150-200GB of available space. If you do not wish to utilize the full wordlists library, do not download RockYou2021 from the link below and/or select 'N' when prompted during wordlist escalation mid-execution.
 
 Download brockyou.txt at ( https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa1C2M4Ame_3bjxU9xXGfY ) and add to wordlist directory
+Download ROckYou2021 at ( https://mega.nz/folder/aDpmxCiD#f_pSJ0vV698-Ev1mbyYNAQ ) and each 7z group to the wordlist directory
 
 # Dependency Tools
 
@@ -68,4 +75,5 @@ Download brockyou.txt at ( https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa
    If using bkcrack to launch known-plaintext attack, ensure the plaintext file is located within /plaintexts subdirectory
 2. Run ForensiCrack
   python3 forensicrack.py --execute
-3. Review results in /output/, /logs/, and /archives/ directories
+3. If prompted due to insufficient entries from brockyou.txt and passphrases.txt, select 'Y' to begin the decompression of RockYou2021 folders. Selecting 'N' permanently kills the decompression automation process, meaning it will need to be done manually for each group. 
+4. Review results in /output/, /logs/, and /archives/ directories
