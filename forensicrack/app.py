@@ -7,15 +7,15 @@ import subprocess
 import shutil
 from typing import List
 
-from .config import Config
-from .models import EvidenceFile
-from .file_id import FileIdentifier
-from .wordlists import WordlistManager
-from .steg import StegEngine
-from .steg_zsteg import ZstegEngine
-from .cracking_hashcat import HashcatEngine
-from .cracking_john import JohnEngine
-from .archives import ArchiveEngine
+from config import Config
+from models import EvidenceFile
+from file_id import FileIdentifier
+from wordlists import WordlistManager
+from steg import StegEngine
+from steg_zsteg import ZstegEngine
+from cracking_hashcat import HashcatEngine
+from cracking_john import JohnEngine
+from archives import ArchiveEngine
 
 
 class ForensiCrackApp:
