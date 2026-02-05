@@ -9,6 +9,16 @@ class HashcatEngine:
 
         self.KNOWN_HASH_MAP = {
             "ntlm": 1000,
+            "7-Zip": 11600,
+            "WinZip": 13600,
+            "PKZIP (Compressed)": 17200,
+            "PKZIP (Uncompressed)": 17210,
+            "PKZIP (Compressed Multi-File)": 17220,
+            "PKZIP (Mixed Multi-File)": 17225,
+            "PKZIP (Multi-File Checksum-Only)": 17230,
+            "PKZIP Master Key": 20500,
+            "PKZIP Master Key (6 bytes)": 20510,
+            "SHA256 (sha256($pass).$salt))": 207010,
             "netntlmv1": 5500,
             "netntlmv2": 5600,
             "sha512crypt": 1800,
@@ -28,6 +38,14 @@ class HashcatEngine:
             "aes": 13600,
             "aes-7zip": 11600,
             "7zip-aes": 11600,
+            "PKZIP (Compressed)": 17200,
+            "PKZIP (Uncompressed)": 17210,
+            "PKZIP (Compressed Multi-File)": 17220,
+            "PKZIP (Mixed Multi-File)": 17225,
+            "PKZIP (Multi-File Checksum-Only)": 17230,
+            "PKZIP Master Key": 20500,
+            "PKZIP Master Key (6 bytes)": 20510,
+            "SHA256 (sha256($pass).$salt))": 207010,
             "office2007": 9400,
             "office2010": 9500,
             "office2013": 9600,
@@ -120,8 +138,13 @@ class HashcatEngine:
         if ext == ".zip" and zip_info:
             if zip_info == "aes":
                 return 13600
-            elif zip_info in ("zipcrypto", None):
+            elif zip_info =="zipcrypto":
                 return "USE_PKCRACK"
+            else:
+                #Unknown or modern ZIP without flags = assume AES
+                self.logger.warning(f"Unknown ZIP encryption type for {evidence.path} - assuming AES")
+                return 13600
+            
 
         # Fallback prompt
         mode_str = input(
