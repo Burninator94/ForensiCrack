@@ -36,9 +36,12 @@ def install_dependencies(config):
     _install_wordlists(config)
 
     print("[+] Installation complete.")
-    print("[!] Reminder: rockyou.txt must be placed manually into:")
+    print("[!] Reminder: brockyou.txt must be downloaded and placed manually into:")
     print(f"    {config.WORDLIST_DIR}")
-    print("    Download example: https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt")
+    print("    Download link: https://mega.nz/file/cr5HGACC#ANXlTyu8sdlIUizcIX418sa1C2M4Ame_3bjxU9xXGfY")
+    print("[!] Reminder: RockYou2021.txt must be downloaded and placed manually into:")
+    print(f"    {config.WORDLIST_DIR}")
+    print("    Download link: https://mega.nz/folder/aDpmxCiD#f_pSJ0vV698-Ev1mbyYNAQ")
 
 
 def _install_linux_tools():
