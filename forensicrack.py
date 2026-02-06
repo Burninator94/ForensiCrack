@@ -3,10 +3,10 @@ import argparse
 import sys
 import shutil
 import os
-from config import Config
-from install import install_dependencies
-from app import ForensiCrackApp
-from logging_config import setup_logging
+from .config import Config
+from .install import install_dependencies
+from .app import ForensiCrackApp
+from .logging_config import setup_logging
 import subprocess
 
 
