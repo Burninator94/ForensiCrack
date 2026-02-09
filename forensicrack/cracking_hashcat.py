@@ -1,6 +1,9 @@
 import os
 import subprocess
 import logging
+import sys
+import re
+from pathlib import Path
 
 
 class HashcatEngine:
@@ -25,12 +28,24 @@ class HashcatEngine:
             "sha512crypt": 1800,
             "sha256crypt": 7400,
             "md5crypt": 500,
+            # PDFs - try in order of likelihood (modern first)
+            "pdf": [10700, 10500, 10400, 10410, 10420, 10510, 10710],  # PDF 1.7, 1.4, 1.1-1.3, colliders, RC4-40, 2.0
             "pdf14": 10500,
             "pdf17": 10700,
             "pdf20": 10710,
+            "pdf 1.1 - 1.3 (acrobat 2-4)": 10400,
+            "pdf 1.1 - 1.3 (acrobat 2-4) collider #1": 10410,
+            "pdf 1.1 - 1.3 (acrobat 2-4) collider #2": 10420,
+            "pdf 1.4 - 1.6 (acrobat 5 - 8)": 10500,
+            "pdf 1.3 - 1.6 (acrobat 3-8) rc4-40": 10510,
+            # Office - try newer first, then older
+            "office": [9600, 9700, 9800, 9500, 9400],  # 2013 → 2016+ → 365 → 2010 → 2007
             "office2007": 9400,
             "office2010": 9500,
             "office2013": 9600,
+            "office2016": 9700,
+            "office365": 9800,
+            "office2019": 9900,
             # common plain hashes if upstream passes these labels
             "md5": 0,
             "sha1": 100,
@@ -50,26 +65,28 @@ class HashcatEngine:
             "pkzip master key": 20500,
             "pkzip master key (6 bytes)": 20510,
             "sha256 (sha256($pass).$salt))": 207010,
-            "office2007": 9400,
-            "office2010": 9500,
-            "office2013": 9600,
+            # PDFs - try in order of likelihood (modern first)
+            "pdf": [10700, 10500, 10400, 10410, 10420, 10510, 10710],  # PDF 1.7, 1.4, 1.1-1.3, colliders, RC4-40, 2.0
             "pdf14": 10500,
             "pdf17": 10700,
             "pdf20": 10710,
+            "pdf 1.1 - 1.3 (acrobat 2-4)": 10400,
+            "pdf 1.1 - 1.3 (acrobat 2-4) collider #1": 10410,
+            "pdf 1.1 - 1.3 (acrobat 2-4) collider #2": 10420,
+            "pdf 1.4 - 1.6 (acrobat 5 - 8)": 10500,
+            "pdf 1.3 - 1.6 (acrobat 3-8) rc4-40": 10510,
+            # Office - try newer first, then older
+            "office": [9600, 9700, 9800, 9500, 9400],  # 2013 → 2016+ → 365 → 2010 → 2007
+            "office2007": 9400,
+            "office2010": 9500,
+            "office2013": 9600,
+            "office2016": 9700,
+            "office365": 9800,
+            "office2019": 9900,
         }
 
-    # ----------------------------
-    # Hashcat cracking (FIXED)
-    # ----------------------------
-    def crack_hashfile(self, hashfile: str, hash_type_code: int, wordlists: list[str], output_path: str) -> bool:
-        """
-        FIXES:
-        - Do NOT treat --outfile as a "pot" file.
-        - Use a dedicated per-target hashcat potfile so --show is reliable.
-        - Do NOT use check=True (hashcat exit codes are nuanced).
-        - Log BOTH stdout and stderr on failures (hashcat often prints to stdout).
-        - Determine success by running `hashcat --show` and finding real hash:plain lines.
-        """
+
+    def crack_hashfile(self, hashfile: str, hash_type_code: int | list[int], wordlists: list[str], output_path: str) -> bool:
         out_dir = os.path.dirname(output_path) or "."
         os.makedirs(out_dir, exist_ok=True)
 
@@ -98,11 +115,11 @@ class HashcatEngine:
                     lines.append(s)
             return lines
 
-        def _run_show() -> list[str]:
+        def _run_show(mode: int) -> list[str]:
             show_cmd = [
                 "hashcat",
                 "--show",
-                "-m", str(hash_type_code),
+                "-m", str(mode),
                 "--outfile-format", "2",
                 "--potfile-path", pot_path,
                 hashfile,
@@ -115,52 +132,63 @@ class HashcatEngine:
                 self.logger.debug(f"Hashcat --show stderr:\n{err.strip()}")
             return _filter_show_lines(out)
 
-        for wordlist in wordlists:
-            cmd = [
-                "hashcat",
-                "-m", str(hash_type_code),
-                "-a", "0",
-                hashfile,
-                wordlist,
-                "--potfile-path", pot_path,
-                "--outfile", output_path,
-                "--outfile-format", "2",
-                "--quiet",
-                "--force",
-            ]
-            self.logger.info(f"Running Hashcat: {' '.join(cmd)}")
+        def _crack_with_mode(mode: int, wordlists: list[str]) -> bool:
+            for wordlist in wordlists:
+                cmd = [
+                    "hashcat",
+                    "-m", str(mode),
+                    "-a", "0",
+                    hashfile,
+                    wordlist,
+                    "--potfile-path", pot_path,
+                    "--outfile", output_path,
+                    "--outfile-format", "2",
+                    "--quiet",
+                    "--force",
+                ]
+                self.logger.info(f"Running Hashcat: {' '.join(cmd)}")
 
-            try:
-                res = subprocess.run(cmd, capture_output=True)
+                try:
+                    res = subprocess.run(cmd, capture_output=True)
 
-                stdout_str = _decode(res.stdout).strip()
-                stderr_str = _decode(res.stderr).strip()
+                    stdout_str = _decode(res.stdout).strip()
+                    stderr_str = _decode(res.stderr).strip()
 
-                # Hashcat often prints useful info to stdout; log both at debug.
-                if stdout_str:
-                    self.logger.debug(f"Hashcat stdout:\n{stdout_str}")
-                if stderr_str:
-                    self.logger.debug(f"Hashcat stderr:\n{stderr_str}")
+                    # Hashcat often prints useful info to stdout; log both at debug.
+                    if stdout_str:
+                        self.logger.debug(f"Hashcat stdout:\n{stdout_str}")
+                    if stderr_str:
+                        self.logger.debug(f"Hashcat stderr:\n{stderr_str}")
 
-                # Always decide success by --show results (not by exit code)
-                show_lines = _run_show()
-                if show_lines:
-                    # Write filtered results so the rest of your app can read one predictable file
-                    with open(output_path, "w", encoding="utf-8", errors="replace") as f:
-                        f.write("\n".join(show_lines) + "\n")
+                    # Always decide success by --show results (not by exit code)
+                    show_lines = _run_show(mode)
+                    if show_lines:
+                        # Write filtered results so the rest of your app can read one predictable file
+                        with open(output_path, "w", encoding="utf-8", errors="replace") as f:
+                            f.write("\n".join(show_lines) + "\n")
 
-                    self.logger.info(f"Hashcat succeeded → wrote {len(show_lines)} result line(s): {output_path}")
-                    self.logger.info(f"Hashcat completed on {hashfile} with {wordlist}")
+                        self.logger.info(f"Hashcat succeeded → wrote {len(show_lines)} result line(s): {output_path}")
+                        self.logger.info(f"Hashcat completed on {hashfile} with {wordlist}")
+                        return True
+
+                    # No cracks for this wordlist
+                    self.logger.info(f"No passwords cracked this run for {hashfile} with {wordlist} (exit {res.returncode})")
+
+                except Exception as e:
+                    self.logger.error(f"Unexpected error running Hashcat: {e}")
+
+            return False
+
+        # If mode is a list, try each in order
+        if isinstance(hash_type_code, list):
+            for m in hash_type_code:
+                self.logger.info(f"Trying Hashcat mode {m} for {hashfile}")
+                if _crack_with_mode(m, wordlists):
                     return True
-
-                # No cracks for this wordlist
-                self.logger.info(f"No passwords cracked this run for {hashfile} with {wordlist} (exit {res.returncode})")
-
-            except Exception as e:
-                self.logger.error(f"Unexpected error running Hashcat: {e}")
-
-        self.logger.warning(f"Hashcat exhausted all wordlists for {hashfile}")
-        return False
+            self.logger.warning(f"All modes exhausted for {hashfile}")
+            return False
+        else:
+            return _crack_with_mode(hash_type_code, wordlists)
 
     def resolve_hashcat_mode(self, evidence, file_identifier, zip_info=None):
         if evidence.known_hash_algo:
@@ -178,13 +206,13 @@ class HashcatEngine:
         ext = evidence.ext
 
         if file_identifier.is_pdf(ext):
-            return 10700  # Default modern PDF
+            return self.KNOWN_HASH_MAP.get("pdf")  # Returns list of modes to try
 
         office_class = file_identifier.classify_office(ext)
         if office_class == "office2013":
-            return 9600
+            return self.KNOWN_HASH_MAP.get("office")  # Returns list
         elif office_class == "office2007":
-            return 9400
+            return self.KNOWN_HASH_MAP.get("office")  # Returns list
 
         if ext == ".7z":
             return 11600
@@ -199,10 +227,6 @@ class HashcatEngine:
                 return 13600
 
         # --- GUI-safe / non-interactive mode resolution ---
-        import sys
-        import re
-        from pathlib import Path
-
         p = evidence.path
         p_str = p if isinstance(p, str) else str(p)
         fname = Path(p_str).name.lower()
@@ -217,7 +241,7 @@ class HashcatEngine:
             return None
 
         mode_str = input(
-            f"Unknown mode for {evidence.path}. Enter Hashcat mode (integer) or blank to skip: "
+            f"Unknown mode for {evidence.path}. Enter Hashcat mode (integer) or blank to skip:."
         ).strip()
         if not mode_str:
             return None
